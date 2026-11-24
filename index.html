@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>풍선 터뜨리기 팀 대결</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;background:#cfeeff;color:#12324a;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column}
+.top{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(6px,1.5vw,20px);padding:clamp(6px,1.5vw,16px);align-items:stretch}
+.team{background:#fff;border-radius:20px;text-align:center;padding:6px 8px;border:6px solid transparent;transition:.2s;box-shadow:0 4px 0 rgba(0,0,0,.12)}
+.team.a{--tc:#e5283c}.team.b{--tc:#1f5bff}
+.team.active{border-color:#ffc400;transform:scale(1.04);box-shadow:0 0 0 4px #fff,0 8px 24px rgba(0,0,0,.25)}
+.tname{font-size:clamp(22px,4vw,48px);font-weight:900;color:var(--tc)}
+.tscore{font-size:clamp(52px,13vw,140px);font-weight:900;line-height:1;color:var(--tc);font-variant-numeric:tabular-nums}
+.tscore.bump{animation:bump .15s}
+.tsub{font-size:clamp(14px,2vw,24px);min-height:1.4em;color:#5b7a90;font-weight:700}
+.center{text-align:center;display:flex;flex-direction:column;justify-content:center;min-width:clamp(120px,22vw,300px)}
+#turnLabel{font-size:clamp(24px,5vw,64px);font-weight:900;line-height:1.15}
+#roundLabel{font-size:clamp(14px,2.2vw,28px);font-weight:700;color:#4a7390}
+.timer{font-size:clamp(44px,9vw,110px);font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums}
+.timer small{font-size:.35em}
+.timer.low{color:#e5283c;animation:pulse .5s infinite alternate}
+.tools{display:flex;justify-content:center;gap:12px;padding:0 12px 8px}
+.tools button{min-height:48px;padding:0 20px;font-size:clamp(16px,2.2vw,24px);font-weight:800;border:0;border-radius:14px;background:#fff;color:#12324a;box-shadow:0 3px 0 rgba(0,0,0,.15);cursor:pointer}
+#stage{position:relative;flex:1;overflow:hidden;touch-action:none;background:linear-gradient(#8fd6ff,#e8f8ff);border-top:4px solid #fff}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;background:
+radial-gradient(ellipse 120px 40px at 15% 20%,rgba(255,255,255,.6) 60%,transparent 62%),
+radial-gradient(ellipse 160px 50px at 70% 12%,rgba(255,255,255,.6) 60%,transparent 62%),
+radial-gradient(ellipse 140px 45px at 45% 55%,rgba(255,255,255,.45) 60%,transparent 62%),
+radial-gradient(ellipse 180px 50px at 88% 70%,rgba(255,255,255,.45) 60%,transparent 62%)}
+.balloon{position:absolute;z-index:3;cursor:pointer;animation:rise var(--dur) linear forwards;will-change:transform}
+.shape{position:relative;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.85) 0 7%,rgba(255,255,255,0) 8%),radial-gradient(circle at 35% 30%,rgba(255,255,255,.3),rgba(255,255,255,0) 50%),var(--c);
+box-shadow:inset -.07em -.09em 0 rgba(0,0,0,.18),0 .03em .06em rgba(0,0,0,.2);animation:sway 2.2s ease-in-out infinite alternate;transform-origin:50% 130%}
+.shape::before{content:"";position:absolute;left:50%;bottom:-.06em;transform:translateX(-50%);border-left:.05em solid transparent;border-right:.05em solid transparent;border-bottom:.08em solid var(--c)}
+.shape::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:.55em;margin-left:-1px;background:rgba(40,60,80,.45)}
+.bit{position:absolute;z-index:6;border-radius:50%;pointer-events:none;animation:burst .75s ease-out forwards}
+.plus{position:absolute;z-index:7;pointer-events:none;font-weight:900;font-size:clamp(32px,5vw,56px);color:#fff;-webkit-text-stroke:2px #12324a;paint-order:stroke fill;text-shadow:0 3px 0 rgba(0,0,0,.25);transform:translate(-50%,-50%);animation:floatup .8s ease-out forwards}
+#overlay{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.55);backdrop-filter:blur(3px);padding:12px;overflow:auto}
+#overlay.hidden{display:none}
+.card{background:#fff;border-radius:28px;padding:clamp(18px,3vw,40px);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.25);width:100%;max-width:min(92vw,820px)}
+.card h2{margin:0 0 12px;font-size:clamp(30px,6vw,72px);line-height:1.15}
+#ovBody{font-size:clamp(18px,3vw,36px);line-height:1.5;font-weight:700;margin-bottom:20px}
+.rule{font-size:.75em;color:#5b7a90}
+.big{font-family:inherit;font-size:clamp(26px,4.5vw,52px);font-weight:900;padding:.4em 1.4em;min-height:64px;border:0;border-radius:999px;background:#ff8a00;color:#fff;box-shadow:0 6px 0 #c76400;cursor:pointer}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #c76400}
+.final{display:flex;gap:12px;align-items:center;justify-content:center}
+.fbox{flex:1;border-radius:20px;padding:10px;background:#f2f8fc;border:6px solid transparent;font-size:clamp(18px,3vw,36px)}
+.fbox b{display:block;font-size:clamp(48px,11vw,120px);line-height:1.05}
+.fbox.a{color:#e5283c}.fbox.b{color:#1f5bff}
+.fbox.win{border-color:#ffc400;background:#fff8dc}
+.vs{font-size:clamp(20px,3vw,40px);font-weight:900;color:#7a93a6}
+.winner{margin-top:14px;font-size:clamp(34px,8vw,92px);font-weight:900}
+@keyframes rise{from{transform:translateY(0)}to{transform:translateY(calc(var(--dist) * -1))}}
+@keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+@keyframes burst{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.3);opacity:0}}
+@keyframes floatup{from{opacity:1;transform:translate(-50%,-50%)}to{opacity:0;transform:translate(-50%,-170%)}}
+@keyframes pulse{to{transform:scale(1.12)}}
+@keyframes bump{50%{transform:scale(1.18)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="team a" id="teamA"><div class="tname">A팀</div><div class="tscore" id="scoreA">0</div><div class="tsub" id="subA"></div></div>
+    <div class="center">
+      <div id="turnLabel">A팀 차례</div>
+      <div id="roundLabel">1 / 4 차례</div>
+      <div class="timer" id="timerBox"><span id="timer">30</span><small>초</small></div>
+    </div>
+    <div class="team b" id="teamB"><div class="tname">B팀</div><div class="tscore" id="scoreB">0</div><div class="tsub" id="subB"></div></div>
+  </header>
+  <div class="tools">
+    <button id="resetBtn">다시 하기</button>
+    <button id="soundBtn">🔊 소리 켜짐</button>
+  </div>
+  <main id="stage">
+    <div id="overlay"><div class="card"><h2 id="ovTitle"></h2><div id="ovBody"></div><button class="big" id="mainBtn"></button></div></div>
+  </main>
+</div>
+
+<script>
+/* ===== 바꿔 볼 수 있는 설정 ===== */
+const TURN_SECONDS   = 30;                    // 한 차례 시간(초)
+const TOTAL_TURNS    = 4;                     // 전체 차례 수 (A,B,A,B)
+const INTERVAL_START = 1100, INTERVAL_END = 380; // 풍선 나오는 간격(ms): 차례 시작 → 끝으로 갈수록 짧아짐
+const RISE_START     = 7000,  RISE_END    = 3800; // 풍선이 올라가는 데 걸리는 시간(ms): 작을수록 빠름
+const POINTS = { big: 1, mid: 2, small: 3 };  // 점수 기준
+const COLORS = ['#ff3b4e','#ff8a00','#ffd000','#22c55e','#a855f7','#ff4fa3','#1d4ed8'];
+/* ================================= */
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), overlay = $('overlay'), mainBtn = $('mainBtn');
+const lerp = (a, b, t) => a + (b - a) * t;
+const teamOf = t => (t % 2 === 0 ? 'A' : 'B');
+
+let state = 'idle';            // idle | playing | between | final
+let turn = 0, cur = 0, banked = { A: [], B: [] };
+let turnStart = 0, nextSpawn = 0, lastSec = 0, raf = 0;
+
+/* ---------- 효과음 (Web Audio API) ---------- */
+let audioCtx = null, soundOn = true;
+function ac() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { audioCtx = null; }
+  return audioCtx;
+}
+function tone(freq, dur, type, vol, delay, slideTo) {
+  if (!soundOn) return;
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(vol || 0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, vol) {
+  if (!soundOn) return;
+  const c = ac(); if (!c) return;
+  const n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const s = c.createBufferSource(), g = c.createGain();
+  s.buffer = buf; g.gain.value = vol;
+  s.connect(g); g.connect(c.destination); s.start();
+}
+const sfxPop   = p => { noise(0.09, 0.35); tone(380 + p * 160, 0.12, 'triangle', 0.25, 0, 120); };
+const sfxTick  = () => tone(880, 0.08, 'square', 0.08);
+const sfxStart = () => { tone(660, 0.15, 'triangle', 0.2); tone(990, 0.2, 'triangle', 0.2, 0.12); };
+const sfxEnd   = () => [660, 520, 400].forEach((f, i) => tone(f, 0.25, 'sine', 0.22, i * 0.18));
+const sfxWin   = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, 'triangle', 0.22, i * 0.15));
+
+/* ---------- 점수/화면 갱신 ---------- */
+const total = team => banked[team].reduce((a, b) => a + b, 0);
+const shown = team => total(team) + (state === 'playing' && teamOf(turn) === team ? cur : 0);
+
+function render() {
+  $('scoreA').textContent = shown('A');
+  $('scoreB').textContent = shown('B');
+  $('subA').textContent = banked.A.join(' + ');
+  $('subB').textContent = banked.B.join(' + ');
+  const t = teamOf(turn), final = state === 'final';
+  $('teamA').classList.toggle('active', !final && t === 'A');
+  $('teamB').classList.toggle('active', !final && t === 'B');
+  const label = $('turnLabel');
+  label.textContent = final ? '경기 종료' : t + '팀 차례';
+  label.style.color = final ? '#12324a' : (t === 'A' ? '#e5283c' : '#1f5bff');
+  $('roundLabel').textContent = Math.min(turn + 1, TOTAL_TURNS) + ' / ' + TOTAL_TURNS + ' 차례';
+  if (state !== 'playing') {
+    $('timer').textContent = final ? '0' : TURN_SECONDS;
+    $('timerBox').classList.remove('low');
+  }
+}
+function bump() {
+  const el = $('score' + teamOf(turn));
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+}
+function showOverlay(title, body, btn) {
+  $('ovTitle').textContent = title;
+  $('ovBody').innerHTML = body;
+  mainBtn.textContent = btn;
+  overlay.classList.remove('hidden');
+}
+function showIdle() {
+  showOverlay('풍선 터뜨리기 대결',
+    'A팀과 B팀이 ' + TURN_SECONDS + '초씩<br>번갈아 ' + TOTAL_TURNS + '차례 겨룹니다<br><span class="rule">큰 풍선 ' + POINTS.big + '점 · 중간 ' + POINTS.mid + '점 · 작은 풍선 ' + POINTS.small + '점</span>',
+    '시작');
+}
+function clearStage() {
+  stage.querySelectorAll('.balloon,.bit,.plus').forEach(e => e.remove());
+}
+
+/* ---------- 풍선 만들기 ---------- */
+function spawn(p) {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const big = Math.min(170, Math.max(92, W * 0.18));
+  const r = Math.random();
+  const kind = r < 0.4 ? 'big' : r < 0.75 ? 'mid' : 'small';
+  const w = kind === 'big' ? big : kind === 'mid' ? big * 0.78 : big * 0.58;
+  const pad = 14;                                   // 누르기 편하도록 풍선 둘레 여유
+  const x = Math.random() * Math.max(1, W - (w + pad * 2));
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const dur = lerp(RISE_START, RISE_END, p) * (0.9 + Math.random() * 0.2) * (kind === 'small' ? 0.85 : 1);
+  const el = document.createElement('div');
+  el.className = 'balloon';
+  el.dataset.points = POINTS[kind];
+  el.dataset.color = color;
+  el.style.cssText = 'left:' + x + 'px;top:' + H + 'px;padding:' + pad + 'px;--c:' + color + ';--dur:' + dur + 'ms;--dist:' + (H + w * 2.2 + 60) + 'px';
+  el.innerHTML = '<div class="shape" style="width:' + w + 'px;height:' + (w * 1.2) + 'px;font-size:' + w + 'px;animation-delay:' + (-Math.random() * 2) + 's"></div>';
+  el.addEventListener('pointerdown', ev => { ev.preventDefault(); pop(el); });
+  el.addEventListener('animationend', ev => { if (ev.target === el) el.remove(); });
+  stage.appendChild(el);
+}
+
+/* ---------- 터뜨리기 ---------- */
+function pop(el) {
+  if (state !== 'playing' || el.dataset.done) return;
+  el.dataset.done = 1;
+  const pts = +el.dataset.points;
+  const sr = stage.getBoundingClientRect(), br = el.querySelector('.shape').getBoundingClientRect();
+  const cx = br.left + br.width / 2 - sr.left, cy = br.top + br.height / 2 - sr.top;
+  burst(cx, cy, el.dataset.color, br.width);
+  const t = document.createElement('div');
+  t.className = 'plus'; t.textContent = '+' + pts;
+  t.style.left = cx + 'px'; t.style.top = cy + 'px';
+  stage.appendChild(t); setTimeout(() => t.remove(), 850);
+  el.remove();
+  cur += pts;
+  sfxPop(pts); render(); bump();
+}
+function burst(x, y, color, size) {
+  for (let i = 0; i < 16; i++) {
+    const b = document.createElement('i'), a = Math.random() * Math.PI * 2, d = size * (0.5 + Math.random() * 0.9), s = 8 + Math.random() * 10;
+    b.className = 'bit';
+    b.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + s + 'px;height:' + (s * (Math.random() < 0.5 ? 1 : 0.5)) + 'px;background:' +
+      (i % 3 === 0 ? color : COLORS[Math.floor(Math.random() * COLORS.length)]) +
+      ';--dx:' + (Math.cos(a) * d) + 'px;--dy:' + (Math.sin(a) * d + size * 0.3) + 'px;--rot:' + (Math.random() * 720 - 360) + 'deg';
+    stage.appendChild(b); setTimeout(() => b.remove(), 800);
+  }
+}
+
+/* ---------- 게임 진행 ---------- */
+function loop(now) {
+  if (state !== 'playing') return;
+  const elapsed = now - turnStart, remain = TURN_SECONDS * 1000 - elapsed;
+  if (remain <= 0) { endTurn(); return; }
+  const sec = Math.ceil(remain / 1000);
+  if (sec !== lastSec) {
+    lastSec = sec;
+    $('timer').textContent = sec;
+    $('timerBox').classList.toggle('low', sec <= 5);
+    if (sec <= 5) sfxTick();
+  }
+  if (now >= nextSpawn && remain > 700) {
+    const p = elapsed / (TURN_SECONDS * 1000);       // 0 → 1 : 시간이 갈수록 빨라짐
+    spawn(p);
+    nextSpawn = now + lerp(INTERVAL_START, INTERVAL_END, p) * (0.8 + Math.random() * 0.4);
+  }
+  raf = requestAnimationFrame(loop);
+}
+function startTurn() {
+  ac();
+  state = 'playing'; cur = 0; lastSec = 0;
+  overlay.classList.add('hidden');
+  turnStart = performance.now(); nextSpawn = turnStart + 300;
+  sfxStart(); render();
+  raf = requestAnimationFrame(loop);
+}
+function endTurn() {
+  cancelAnimationFrame(raf);
+  const team = teamOf(turn), got = cur;
+  state = 'between';
+  banked[team].push(got); cur = 0; turn++;
+  clearStage();
+  if (turn >= TOTAL_TURNS) { finish(); }
+  else {
+    sfxEnd();
+    showOverlay(team + '팀 끝! ' + teamOf(turn) + '팀 차례입니다',
+      '이번 차례 <b>' + got + '점</b> · ' + team + '팀 합계 <b>' + total(team) + '점</b><br><span class="rule">다음은 ' + (turn + 1) + ' / ' + TOTAL_TURNS + ' 차례</span>',
+      '다음 차례 시작');
+  }
+  render();
+}
+function finish() {
+  state = 'final';
+  const a = total('A'), b = total('B');
+  const res = a > b ? '🏆 A팀 승리!' : b > a ? '🏆 B팀 승리!' : '🤝 무승부';
+  const cls = a > b ? 'color:#e5283c' : b > a ? 'color:#1f5bff' : 'color:#12324a';
+  sfxWin();
+  showOverlay('게임 끝!',
+    '<div class="final"><div class="fbox a ' + (a > b ? 'win' : '') + '">A팀 합계<b>' + a + '</b></div><div class="vs">VS</div><div class="fbox b ' + (b > a ? 'win' : '') + '">B팀 합계<b>' + b + '</b></div></div>' +
+    '<div class="winner" style="' + cls + '">' + res + '</div>',
+    '다시 하기');
+}
+function resetGame() {
+  cancelAnimationFrame(raf);
+  state = 'idle'; turn = 0; cur = 0; banked = { A: [], B: [] };
+  clearStage(); showIdle(); render();
+}
+
+/* ---------- 버튼 ---------- */
+mainBtn.addEventListener('click', () => {
+  if (state === 'final') resetGame();
+  else if (state === 'idle' || state === 'between') startTurn();
+});
+$('resetBtn').addEventListener('click', resetGame);
+$('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  $('soundBtn').textContent = soundOn ? '🔊 소리 켜짐' : '🔇 소리 꺼짐';
+  if (soundOn) { ac(); tone(700, 0.1, 'triangle', 0.15); }
+});
+
+resetGame();
+</script>
+</body>
+</html>
